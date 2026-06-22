@@ -1,0 +1,273 @@
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <algorithm>
+using namespace std;
+
+const int MAX = 100;
+
+class Phone {
+private:
+    string code;
+    string name;
+    double price;
+    string manufacturer;
+
+public:
+    Phone() {}
+
+    Phone(string c, string n, double p, string m) {
+        code = c;
+        name = n;
+        price = p;
+        manufacturer = m;
+    }
+
+    string getName() const { return name; }
+    string getCode() const { return code; }
+    double getPrice() const { return price; }
+    string getManufacturer() const { return manufacturer; }
+
+    void input() {
+        cout << "Enter code: ";
+        cin >> code;
+        cin.ignore();
+        cout << "Enter name: ";
+        getline(cin, name);
+        cout << "Enter price: ";
+        while (!(cin >> price) || price < 0) {
+            cout << "Invalid price. Enter again: ";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+        cin.ignore();
+        cout << "Enter manufacturer: ";
+        getline(cin, manufacturer);
+    }
+
+    void display() const {
+        cout << left << setw(10) << code
+             << setw(20) << name
+             << right << setw(10) << fixed << setprecision(2) << price << "   "
+             << left << setw(15) << manufacturer << endl;
+    }
+
+    void saveToFile(ofstream &out) const {
+        out << code << ";" << name << ";" << price << ";" << manufacturer << endl;
+    }
+
+    static Phone loadFromLine(const string &line) {
+        string c, n, m, p_str;
+        double p;
+        stringstream ss(line);
+        getline(ss, c, ';');
+        getline(ss, n, ';');
+        getline(ss, p_str, ';');
+        p = stod(p_str);
+        getline(ss, m);
+        return Phone(c, n, p, m);
+    }
+};
+
+// Hàm chuyển số sang thứ tự
+string getOrdinal(int num) {
+    if (num % 100 >= 11 && num % 100 <= 13)
+        return to_string(num) + "th";
+    switch (num % 10) {
+        case 1: return to_string(num) + "st";
+        case 2: return to_string(num) + "nd";
+        case 3: return to_string(num) + "rd";
+        default: return to_string(num) + "th";
+    }
+}
+
+// Helper: chuyển string thành chữ thường
+string toLower(string s) {
+    transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
+
+// Hiển thị tiêu đề
+void showHeader() {
+    cout << left << setw(10) << "CODE"
+         << setw(20) << "NAME"
+         << right << setw(10) << "PRICE   "
+         << left << setw(15) << "MANUFACTURER" << endl;
+    cout << string(60, '-') << endl;
+}
+
+int main() {
+    Phone phones[MAX];
+    int n = 0; // số lượng điện thoại
+    int choice;
+
+    do {
+        cout << "\n1. Create default 4 phones with their information\n";
+        cout << "2. Add new phones\n";
+        cout << "3. Search phone by name\n";
+        cout << "4. List all phones\n";
+        cout << "5. List all phones after sorting by phone name\n";
+        cout << "6. Save all phones to a file\n";
+        cout << "7. Load phones from file\n";
+        cout << "0. Exit\n";
+        cout << "Choose (0->7): ";
+
+        cin >> choice;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Invalid input. Please enter a number.\n";
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                n = 0;
+                phones[n++] = Phone("NO1234", "Nokia 6600", 10.5, "Nokia");
+                phones[n++] = Phone("SA6666", "Note 5", 50.0, "Samsung");
+                phones[n++] = Phone("IP3333", "Iphone XI", 1200.0, "Iphone");
+                phones[n++] = Phone("MO1111", "Motorola tax x", 20.0, "Motorola");
+                cout << "Created 4 phones successful. Result:\n";
+                showHeader();
+                for (int i = 0; i < n; ++i)
+                    phones[i].display();
+                break;
+
+            case 2: {
+                char cont = 'y';
+                while ((cont == 'y' || cont == 'Y') && n < MAX) {
+                    cout << "\nEnter to add new Phone:\n";
+                    Phone p;
+                    p.input();
+                    phones[n++] = p;
+                    cout << "Continue add new phone?(y/n): ";
+                    cin >> cont;
+                    cin.ignore();
+                }
+                if (n >= MAX) {
+                    cout << "Phone list is full!\n";
+                }
+                break;
+            }
+
+            case 3: {
+                if (n == 0) {
+                    cout << "Phone list is empty.\n";
+                    break;
+                }
+                cin.ignore();
+                string searchName;
+                cout << "Enter name Phone to search: ";
+                getline(cin, searchName);
+                if (searchName.empty()) {
+                    cout << "No name entered.\n";
+                    break;
+                }
+
+                string lowerSearch = toLower(searchName);
+                bool found = false;
+                for (int i = 0; i < n; ++i) {
+                    if (toLower(phones[i].getName()) == lowerSearch) {
+                        cout << "FOUND phone name (" << searchName << ") at position "
+                             << getOrdinal(i + 1) << ".\n";
+                        showHeader();
+                        phones[i].display();
+                        found = true;
+                    }
+                }
+                if (!found)
+                    cout << "NOT found phone name (" << searchName << ").\n";
+                break;
+            }
+
+            case 4:
+                if (n == 0) {
+                    cout << "No phones in the list.\n";
+                } else {
+                    showHeader();
+                    for (int i = 0; i < n; ++i)
+                        phones[i].display();
+                }
+                break;
+
+            case 5:
+                if (n == 0) {
+                    cout << "No phones to sort.\n";
+                    break;
+                }
+                {
+                    Phone sorted[MAX];
+                    for (int i = 0; i < n; ++i)
+                        sorted[i] = phones[i];
+
+                    for (int i = 0; i < n - 1; ++i) {
+                        for (int j = i + 1; j < n; ++j) {
+                            if (toLower(sorted[i].getName()) > toLower(sorted[j].getName())) {
+                                swap(sorted[i], sorted[j]);
+                            }
+                        }
+                    }
+
+                    showHeader();
+                    for (int i = 0; i < n; ++i)
+                        sorted[i].display();
+                }
+                break;
+
+            case 6:
+                if (n == 0) {
+                    cout << "No phones to save.\n";
+                    break;
+                }
+                {
+                    ofstream out("dataP.txt");
+                    if (!out) {
+                        cout << "Failed to open file for writing.\n";
+                        break;
+                    }
+                    for (int i = 0; i < n; ++i)
+                        phones[i].saveToFile(out);
+                    out.close();
+                    cout << "Saved file successful!\n";
+                }
+                break;
+
+            case 7: {
+                ifstream in("dataP.txt");
+                if (!in) {
+                    cout << "Failed to open file for reading.\n";
+                    break;
+                }
+                n = 0;
+                string line;
+                while (getline(in, line) && n < MAX) {
+                    if (!line.empty()) {
+                        phones[n++] = Phone::loadFromLine(line);
+                    }
+                }
+                in.close();
+                if (n == 0) {
+                    cout << "No phones loaded from file.\n";
+                } else {
+                    cout << "Loaded phones from file.\n";
+                    showHeader();
+                    for (int i = 0; i < n; ++i)
+                        phones[i].display();
+                }
+                break;
+            }
+
+            case 0:
+                cout << "Exiting...\n";
+                break;
+
+            default:
+                cout << "Invalid choice. Choose between 0 and 7.\n";
+        }
+
+    } while (choice != 0);
+
+    return 0;
+}
